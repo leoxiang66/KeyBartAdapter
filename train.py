@@ -100,41 +100,45 @@ def train(
         return result
 
     # 5. train
-    from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
+    
 
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+    if hd != 0: 
+            
+            from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
-    model_name = 'KeyBartAdapter'
+            data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
-    args = Seq2SeqTrainingArguments(
-        model_name,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=train_batch_size,
-        per_device_eval_batch_size=eval_batch_size,
-        weight_decay=0.01,
-        save_total_limit=3,
-        num_train_epochs=num_epoch,
-        logging_steps=4,
-        load_best_model_at_end=True,
-        metric_for_best_model='fscore@M',
-        predict_with_generate=True,
-        fp16=torch.cuda.is_available(),  # speeds up training on modern GPUs.
-        # eval_accumulation_steps=10,
-    )
+            model_name = 'KeyBartAdapter'
 
-    trainer = Seq2SeqTrainer(
-        model,
-        args,
-        train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["train"],
-        data_collator=data_collator,
-        tokenizer=tokenizer,
-        compute_metrics=compute_metrics
-    )
+            args = Seq2SeqTrainingArguments(
+                model_name,
+                evaluation_strategy="epoch",
+                save_strategy="epoch",
+                learning_rate=2e-5,
+                per_device_train_batch_size=train_batch_size,
+                per_device_eval_batch_size=eval_batch_size,
+                weight_decay=0.01,
+                save_total_limit=3,
+                num_train_epochs=num_epoch,
+                logging_steps=4,
+                load_best_model_at_end=True,
+                metric_for_best_model='fscore@M',
+                predict_with_generate=True,
+                fp16=torch.cuda.is_available(),  # speeds up training on modern GPUs.
+                # eval_accumulation_steps=10,
+            )
 
-    if hd != 0: trainer.train()
+            trainer = Seq2SeqTrainer(
+                model,
+                args,
+                train_dataset=tokenized_dataset["train"],
+                eval_dataset=tokenized_dataset["train"],
+                data_collator=data_collator,
+                tokenizer=tokenizer,
+                compute_metrics=compute_metrics
+            )
+                
+            trainer.train()
 
     # 6. push
     if push_to_hub:
