@@ -24,6 +24,7 @@ def train(
     '''
 
     model = KeyBartAdapter(hd)
+    model_name = 'KeyBartAdapter'
 
     # 3. preprocess dataset
     dataset = dataset.shuffle()
@@ -105,8 +106,6 @@ def train(
             from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
             data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
-
-            model_name = 'KeyBartAdapter'
 
             args = Seq2SeqTrainingArguments(
                 model_name,
