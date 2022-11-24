@@ -3,6 +3,7 @@ def train(
         num_epoch: int,
         train_batch_size: int,
         eval_batch_size: int,
+        hd: int = 256
 ):
     import torch
     import numpy as np
@@ -22,7 +23,7 @@ def train(
                                                   revision='9c3ed39c6ed5c7e141363e892d77cf8f589d5999')
     '''
 
-    model = KeyBartAdapter(256)
+    model = KeyBartAdapter(hd)
 
     # 3. preprocess dataset
     dataset = dataset.shuffle()
@@ -155,6 +156,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--epoch", help="number of epochs", default=30)
+    parser.add_argument("--hd", help="number of hidden dimension of adapter layers", default=256)     
     parser.add_argument("--train_batch_size", help="training batch size", default=16)
     parser.add_argument("--eval_batch_size", help="evaluation batch size", default=16)
     parser.add_argument("--push", help="whether push the model to hub", action='store_true')
@@ -166,6 +168,7 @@ if __name__ == '__main__':
         push_to_hub= bool(args.push),
         num_epoch= int(args.epoch),
         train_batch_size= int(args.train_batch_size),
-        eval_batch_size= int(args.eval_batch_size)
+        eval_batch_size= int(args.eval_batch_size),
+            hd = int(args.hd)
     )
 
