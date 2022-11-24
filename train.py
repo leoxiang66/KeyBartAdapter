@@ -134,7 +134,7 @@ def train(
         compute_metrics=compute_metrics
     )
 
-    trainer.train()
+    if hd != 0: trainer.train()
 
     # 6. push
     if push_to_hub:
