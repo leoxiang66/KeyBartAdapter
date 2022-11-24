@@ -24,7 +24,7 @@ def train(
     '''
 
     model = KeyBartAdapter(hd)
-    model_name = 'KeyBartAdapter'
+    model_name = 'Adapting/KeyBartAdapter'
 
     # 3. preprocess dataset
     dataset = dataset.shuffle()

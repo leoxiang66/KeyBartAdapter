@@ -31,16 +31,21 @@ from transformers.modeling_outputs import (
     Seq2SeqLMOutput
 )
 
+from huggingface_hub import PyTorchModelHubMixin
 
-class KeyBartAdapter(BartForConditionalGeneration):
+
+class KeyBartAdapter(nn.Module, PyTorchModelHubMixin):
     def __init__(self,adapter_hid_dim:int) -> None:
         keyBart = AutoModelForSeq2SeqLM.from_pretrained("bloomberg/KeyBART")
         self.__fix_weights__(keyBart)
 
-        super().__init__(keyBart.model.config)
+        # super().__init__(keyBart.model.config)
+        super().__init__()
+
         self.lm_head = keyBart.lm_head
         self.model = BartPlus(keyBart, adapter_hid_dim)
         self.register_buffer("final_logits_bias", torch.zeros((1, self.model.shared.num_embeddings)))
+        self.config = keyBart.config
 
 
     def __fix_weights__(self,keyBart:BartForConditionalGeneration):
@@ -311,14 +316,8 @@ class BartPlus(BartModel):
         super().__init__(keyBart.model.config)
         self.config = keyBart.model.config
 
-        # self.shared = nn.Embedding(vocab_size, config.d_model, padding_idx)
         self.shared = keyBart.model.shared
-
-        #self.encoder = BartEncoder(config, self.shared)
         self.encoder = keyBart.model.encoder
-
-        #self.decoder = BartDecoder(config, self.shared)
-        #self.decoder = keyBart.model.decoder
         self.decoder = BartDecoderPlus(keyBart,adapter_hid_dim=adapter_hid_dim)
 
     def forward(

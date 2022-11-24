@@ -101,3 +101,4 @@ if __name__ == '__main__':
     print(cross_attention[0].shape)
     # summary(keybart_adapter)
     ####################### KeyBartAdapter Test #############################
+    # print(keybart_adapter.push_to_hub)
