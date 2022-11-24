@@ -100,9 +100,8 @@ def train(
         return result
 
     # 5. train
-    
-
     if hd != 0: 
+            print(hd)
             
             from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
