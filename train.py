@@ -100,7 +100,7 @@ def train(
         return result
 
     # 5. train
-    if epoch != 0: 
+    if num_epoch != 0: 
             
             from transformers import DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
