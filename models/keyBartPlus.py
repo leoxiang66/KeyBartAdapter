@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import random
 from torch.nn import CrossEntropyLoss
+from transformers.generation_utils import GenerationMixin
 
 from transformers.utils import (
 add_start_docstrings_to_model_forward,
@@ -34,7 +35,7 @@ from transformers.modeling_outputs import (
 from huggingface_hub import PyTorchModelHubMixin
 
 
-class KeyBartAdapter(nn.Module,BartForConditionalGeneration, PyTorchModelHubMixin):
+class KeyBartAdapter(nn.Module,GenerationMixin, PyTorchModelHubMixin):
     def __init__(self,adapter_hid_dim:int) -> None:
         keyBart = AutoModelForSeq2SeqLM.from_pretrained("bloomberg/KeyBART")
         self.__fix_weights__(keyBart)
