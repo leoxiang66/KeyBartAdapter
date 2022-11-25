@@ -38,7 +38,6 @@ from transformers.modeling_outputs import (
     Seq2SeqLMOutput
 )
 
-# from huggingface_hub import PyTorchModelHubMixin
 from huggingface_hub.utils import validate_hf_hub_args,HfFolder
 from huggingface_hub.hf_api import HfApi
 from huggingface_hub.repository import Repository
@@ -138,6 +137,7 @@ class KeyBartAdapter(BartForConditionalGeneration):
             token: Optional[Union[str, bool]] = None,
             cache_dir: Optional[str] = None,
             local_files_only: bool = False,
+            revision: Optional[str] = None,
             **model_kwargs,
     ):
         r"""
@@ -205,9 +205,7 @@ class KeyBartAdapter(BartForConditionalGeneration):
 
         model_id = pretrained_model_name_or_path
 
-        revision = None
-        if len(model_id.split("@")) == 2:
-            model_id, revision = model_id.split("@")
+
 
         config_file: Optional[str] = None
         if os.path.isdir(model_id):
