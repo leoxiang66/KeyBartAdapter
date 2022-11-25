@@ -50,7 +50,7 @@ class KeyBartAdapter(BartForConditionalGeneration):
         self.__fix_weights__(keyBart)
 
         super().__init__(keyBart.model.config)
-        # super().__init__()
+
 
         self.lm_head = keyBart.lm_head
         self.model = BartPlus(keyBart, adapter_hid_dim)

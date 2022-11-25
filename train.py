@@ -140,7 +140,7 @@ def train(
     # 6. push
     if push_to_hub:
         commit_msg = f'{model_name}_{num_epoch}'
-        tokenizer.push_to_hub(commit_message=commit_msg, repo_id=model_name)
+        # tokenizer.push_to_hub(commit_message=commit_msg, repo_id=model_name)
         model.push_to_hub(commit_message=commit_msg, repo_id=model_name)
 
     return model, tokenizer
