@@ -15,7 +15,7 @@ def train(
     # 2. Model
     from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
     from models import KeyBartAdapter
-    tokenizer = AutoTokenizer.from_pretrained("Adapting/KeyBartAdapter")
+    tokenizer = AutoTokenizer.from_pretrained("bloomberg/KeyBART")
 
     '''
     Or you can just use the initial model weights from Huggingface:

@@ -1,10 +1,15 @@
+import json
 from pathlib import Path
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Tuple, Dict
+
+import requests
 import torch
 import torch.nn as nn
 import random
 import tempfile
 import os
+
+from huggingface_hub import hf_hub_download
 from torch.nn import CrossEntropyLoss
 
 from transformers.utils import (
@@ -37,6 +42,7 @@ from transformers.modeling_outputs import (
 from huggingface_hub.utils import validate_hf_hub_args,HfFolder
 from huggingface_hub.hf_api import HfApi
 from huggingface_hub.repository import Repository
+from huggingface_hub.constants import CONFIG_NAME, PYTORCH_WEIGHTS_NAME
 
 
 class KeyBartAdapter(BartForConditionalGeneration):
@@ -59,6 +65,188 @@ class KeyBartAdapter(BartForConditionalGeneration):
             i.requires_grad = False
         for i in keyBart.lm_head.parameters():
             i.requires_grad = False
+
+    def save_pretrained(
+        self,
+        save_directory: Union[str, Path],
+        config: Optional[dict] = None,
+        push_to_hub: bool = False,
+        **kwargs,
+    ):
+        """
+        Save weights in local directory.
+
+        Parameters:
+            save_directory (`str` or `Path`):
+                Specify directory in which you want to save weights.
+            config (`dict`, *optional*):
+                Specify config (must be dict) in case you want to save
+                it.
+            push_to_hub (`bool`, *optional*, defaults to `False`):
+                Whether or not to push your model to the Hugging Face Hub after
+                saving it. You can specify the repository you want to push to with
+                `repo_id` (will default to the name of `save_directory` in your
+                namespace).
+            kwargs:
+                Additional key word arguments passed along to the
+                [`~utils.PushToHubMixin.push_to_hub`] method.
+        """
+        os.makedirs(save_directory, exist_ok=True)
+
+        # saving model weights/files
+        self._save_pretrained(save_directory)
+
+        # saving config
+        if isinstance(config, dict):
+            path = os.path.join(save_directory, CONFIG_NAME)
+            with open(path, "w") as f:
+                json.dump(config, f)
+
+        if push_to_hub:
+            kwargs = kwargs.copy()  # soft-copy to avoid mutating input
+            if config is not None:  # kwarg for `push_to_hub`
+                kwargs["config"] = config
+
+            if (
+                # If a deprecated argument is passed, we have to use the deprecated
+                # version of `push_to_hub`.
+                # TODO: remove this possibility in v0.12
+                kwargs.get("repo_url") is not None
+                or kwargs.get("repo_path_or_name") is not None
+                or kwargs.get("organization") is not None
+                or kwargs.get("git_user") is not None
+                or kwargs.get("git_email") is not None
+                or kwargs.get("skip_lfs_files") is not None
+            ):
+                if kwargs.get("repo_path_or_name") is None:
+                    # Repo name defaults to `save_directory` name
+                    kwargs["repo_path_or_name"] = save_directory
+            elif kwargs.get("repo_id") is None:
+                # Repo name defaults to `save_directory` name
+                kwargs["repo_id"] = Path(save_directory).name
+
+            return self.push_to_hub(**kwargs)
+
+    @classmethod
+    @validate_hf_hub_args
+    def from_pretrained(
+            cls,
+            pretrained_model_name_or_path: str,
+            force_download: bool = False,
+            resume_download: bool = False,
+            proxies: Optional[Dict] = None,
+            token: Optional[Union[str, bool]] = None,
+            cache_dir: Optional[str] = None,
+            local_files_only: bool = False,
+            **model_kwargs,
+    ):
+        r"""
+        Download and instantiate a model from the Hugging Face Hub.
+
+                Parameters:
+                    pretrained_model_name_or_path (`str` or `os.PathLike`):
+                        Can be either:
+                            - A string, the `model id` of a pretrained model
+                              hosted inside a model repo on huggingface.co.
+                              Valid model ids can be located at the root-level,
+                              like `bert-base-uncased`, or namespaced under a
+                              user or organization name, like
+                              `dbmdz/bert-base-german-cased`.
+                            - You can add `revision` by appending `@` at the end
+                              of model_id simply like this:
+                              `dbmdz/bert-base-german-cased@main` Revision is
+                              the specific model version to use. It can be a
+                              branch name, a tag name, or a commit id, since we
+                              use a git-based system for storing models and
+                              other artifacts on huggingface.co, so `revision`
+                              can be any identifier allowed by git.
+                            - A path to a `directory` containing model weights
+                              saved using
+                              [`~transformers.PreTrainedModel.save_pretrained`],
+                              e.g., `./my_model_directory/`.
+                            - `None` if you are both providing the configuration
+                              and state dictionary (resp. with keyword arguments
+                              `config` and `state_dict`).
+                    force_download (`bool`, *optional*, defaults to `False`):
+                        Whether to force the (re-)download of the model weights
+                        and configuration files, overriding the cached versions
+                        if they exist.
+                    resume_download (`bool`, *optional*, defaults to `False`):
+                        Whether to delete incompletely received files. Will
+                        attempt to resume the download if such a file exists.
+                    proxies (`Dict[str, str]`, *optional*):
+                        A dictionary of proxy servers to use by protocol or
+                        endpoint, e.g., `{'http': 'foo.bar:3128',
+                        'http://hostname': 'foo.bar:4012'}`. The proxies are
+                        used on each request.
+                    token (`str` or `bool`, *optional*):
+                        The token to use as HTTP bearer authorization for remote
+                        files. If `True`, will use the token generated when
+                        running `transformers-cli login` (stored in
+                        `~/.huggingface`).
+                    cache_dir (`Union[str, os.PathLike]`, *optional*):
+                        Path to a directory in which a downloaded pretrained
+                        model configuration should be cached if the standard
+                        cache should not be used.
+                    local_files_only(`bool`, *optional*, defaults to `False`):
+                        Whether to only look at local files (i.e., do not try to
+                        download the model).
+                    model_kwargs (`Dict`, *optional*):
+                        model_kwargs will be passed to the model during
+                        initialization
+
+                <Tip>
+
+                Passing `token=True` is required when you want to use a
+                private model.
+
+                </Tip>
+        """
+
+        model_id = pretrained_model_name_or_path
+
+        revision = None
+        if len(model_id.split("@")) == 2:
+            model_id, revision = model_id.split("@")
+
+        config_file: Optional[str] = None
+        if os.path.isdir(model_id):
+            if CONFIG_NAME in os.listdir(model_id):
+                config_file = os.path.join(model_id, CONFIG_NAME)
+            else:
+                logger.warning(f"{CONFIG_NAME} not found in {Path(model_id).resolve()}")
+        else:
+            try:
+                config_file = hf_hub_download(
+                    repo_id=model_id,
+                    filename=CONFIG_NAME,
+                    revision=revision,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    proxies=proxies,
+                    resume_download=resume_download,
+                    token=token,
+                    local_files_only=local_files_only,
+                )
+            except requests.exceptions.RequestException:
+                logger.warning(f"{CONFIG_NAME} not found in HuggingFace Hub")
+
+        if config_file is not None:
+            with open(config_file, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            model_kwargs.update({"config": config})
+
+        return cls._from_pretrained(
+            model_id,
+            revision,
+            cache_dir,
+            force_download,
+            proxies,
+            resume_download,
+            local_files_only,
+            token,
+            **model_kwargs,
+        )
 
     @validate_hf_hub_args
     def push_to_hub(
@@ -214,6 +402,59 @@ class KeyBartAdapter(BartForConditionalGeneration):
         repo.git_add(auto_lfs_track=True)
         repo.git_commit(commit_message)
         return repo.git_push()
+
+
+    def _save_pretrained(self, save_directory):
+        """
+        Overwrite this method if you wish to save specific layers instead of the
+        complete model.
+        """
+        path = os.path.join(save_directory, PYTORCH_WEIGHTS_NAME)
+        model_to_save = self.module if hasattr(self, "module") else self
+        torch.save(model_to_save.state_dict(), path)
+
+    @classmethod
+    def _from_pretrained(
+            cls,
+            model_id,
+            revision,
+            cache_dir,
+            force_download,
+            proxies,
+            resume_download,
+            local_files_only,
+            token,
+            map_location="cpu",
+            strict=False,
+            **model_kwargs,
+    ):
+        """
+        Overwrite this method to initialize your model in a different way.
+        """
+        map_location = torch.device(map_location)
+
+        if os.path.isdir(model_id):
+            print("Loading weights from local directory")
+            model_file = os.path.join(model_id, PYTORCH_WEIGHTS_NAME)
+        else:
+            model_file = hf_hub_download(
+                repo_id=model_id,
+                filename=PYTORCH_WEIGHTS_NAME,
+                revision=revision,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                token=token,
+                local_files_only=local_files_only,
+            )
+        model = cls(**model_kwargs)
+
+        state_dict = torch.load(model_file, map_location=map_location)
+        model.load_state_dict(state_dict, strict=strict)
+        model.eval()
+
+        return model
 
     @add_start_docstrings_to_model_forward(BART_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=Seq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
