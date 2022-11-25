@@ -7,7 +7,7 @@ requirements = ["torch",'transformers','datasets']
 
 setup(
     name="KeyBartAdapter",
-    version="0.1.7",
+    version="0.1.8",
     author="Tao Xiang",
     author_email="tao.xiang@tum.de",
     description="A package for KeyBartAdapter",

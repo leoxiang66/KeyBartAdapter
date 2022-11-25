@@ -35,7 +35,7 @@ from transformers.modeling_outputs import (
 from huggingface_hub import PyTorchModelHubMixin
 
 
-class KeyBartAdapter(nn.Module,BartForConditionalGeneration):
+class KeyBartAdapter(BartForConditionalGeneration):
     def __init__(self,adapter_hid_dim:int) -> None:
         keyBart = AutoModelForSeq2SeqLM.from_pretrained("bloomberg/KeyBART")
         self.__fix_weights__(keyBart)
